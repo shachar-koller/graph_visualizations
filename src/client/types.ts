@@ -117,6 +117,12 @@ export interface AlgorithmSummary {
   };
 }
 
+export interface RunIssue {
+  title: string;
+  message: string;
+  details: string[];
+}
+
 export interface AlgorithmRun {
   algorithmId: AlgorithmId;
   name: string;
@@ -124,6 +130,7 @@ export interface AlgorithmRun {
   steps: TraceStep[];
   summary: AlgorithmSummary;
   tables: Table[];
+  issue?: RunIssue;
   path?: string[];
   componentGroups?: string[][];
 }

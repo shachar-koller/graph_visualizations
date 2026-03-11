@@ -32,4 +32,5 @@ export async function buildClient(options: { minify?: boolean } = {}) {
 
   await copyFile(join(clientDir, "index.html"), join(distDir, "index.html"));
   await copyFile(join(clientDir, "styles.css"), join(distDir, "styles.css"));
+  await copyFile(join(clientDir, "favicon.svg"), join(distDir, "favicon.svg"));
 }

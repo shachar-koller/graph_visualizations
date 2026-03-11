@@ -5,7 +5,7 @@ import type {
   AlgorithmRun,
   Edge,
   Graph,
-  Table,
+  RunIssue,
   ToolMode,
   Vertex
 } from "./types";
@@ -43,6 +43,7 @@ interface AppState {
   historyPast: Graph[];
   historyFuture: Graph[];
   sampleId: string;
+  issueModal: RunIssue | null;
 }
 
 interface DragState {
@@ -86,7 +87,8 @@ const state: AppState = {
   randomEdgeCount: 10,
   historyPast: [],
   historyFuture: [],
-  sampleId: "showcase"
+  sampleId: "showcase",
+  issueModal: null
 };
 
 let dragState: DragState | null = null;
@@ -120,6 +122,10 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+function graphEdgeKey(directed: boolean, source: string, target: string) {
+  return directed ? `${source}->${target}` : [source, target].sort().join("--");
+}
+
 function speedToDelay(speed: number) {
   const normalized = clamp(speed, 1, 100);
   return Math.round(1700 - ((normalized - 1) * 1500) / 99);
@@ -131,6 +137,76 @@ function escapeHtml(value: string) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+}
+
+function renderBrandMark(isActive: boolean) {
+  return `
+    <svg
+      class="brand-mark ${isActive ? "brand-mark--active" : ""}"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 64 64"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <defs>
+        <linearGradient id="brand-bg" x1="6" x2="58" y1="4" y2="60" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#f8fbff" />
+          <stop offset="1" stop-color="#dbeafe" />
+        </linearGradient>
+        <radialGradient id="brand-shine" cx="20" cy="14" r="36" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#ffffff" stop-opacity="0.95" />
+          <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+        </radialGradient>
+        <linearGradient id="brand-edge" x1="19" x2="45" y1="45" y2="19" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#14b8a6" />
+          <stop offset="1" stop-color="#f59e0b" />
+        </linearGradient>
+      </defs>
+      <rect width="56" height="56" x="4" y="4" rx="18" fill="url(#brand-bg)" stroke="#93c5fd" stroke-width="2" />
+      <circle cx="18" cy="16" r="22" fill="url(#brand-shine)" opacity="0.85" />
+      <path
+        d="M19 45L45 19"
+        fill="none"
+        stroke="#ffffff"
+        stroke-linecap="round"
+        stroke-opacity="0.55"
+        stroke-width="10"
+      />
+      <path
+        d="M19 45L45 19"
+        fill="none"
+        stroke="url(#brand-edge)"
+        stroke-linecap="round"
+        stroke-width="5.5"
+      />
+      <circle cx="19" cy="45" r="10.5" fill="#0f766e" stroke="#0f172a" stroke-opacity="0.1" stroke-width="1.5" />
+      <circle cx="45" cy="19" r="10.5" fill="#d97706" stroke="#0f172a" stroke-opacity="0.1" stroke-width="1.5" />
+      <text
+        x="19"
+        y="45"
+        fill="#ffffff"
+        font-family="Avenir Next, Trebuchet MS, Segoe UI, sans-serif"
+        font-size="12"
+        font-weight="700"
+        text-anchor="middle"
+        dominant-baseline="central"
+      >
+        A
+      </text>
+      <text
+        x="45"
+        y="19"
+        fill="#ffffff"
+        font-family="Avenir Next, Trebuchet MS, Segoe UI, sans-serif"
+        font-size="12"
+        font-weight="700"
+        text-anchor="middle"
+        dominant-baseline="central"
+      >
+        B
+      </text>
+    </svg>
+  `;
 }
 
 function createId(prefix: "v" | "e") {
@@ -220,9 +296,7 @@ function normalizeGraph(graph: Graph): Graph {
       continue;
     }
 
-    const key = settings.directed
-      ? `${source}->${target}`
-      : [source, target].sort().join("--");
+    const key = graphEdgeKey(settings.directed, source, target);
     const weight = settings.weighted && Number.isFinite(Number(edge?.weight)) ? Number(edge.weight) : 1;
     const existing = edges.get(key);
     if (!existing || weight < existing.weight) {
@@ -275,11 +349,21 @@ function clearTrace() {
   stopPlayback();
   state.trace = null;
   state.stepIndex = 0;
+  state.issueModal = null;
 }
 
 function stopTrace() {
   clearTrace();
   renderApp();
+}
+
+function dismissIssueModal() {
+  if (!state.issueModal) {
+    return;
+  }
+
+  state.issueModal = null;
+  renderGraph();
 }
 
 function pushHistory(snapshot: Graph) {
@@ -315,35 +399,6 @@ function loadGraph(graph: Graph, sampleId = "custom") {
   renderApp();
 }
 
-function toolLabel(tool: ToolMode) {
-  switch (tool) {
-    case "add-edge":
-      return "Add Edge";
-    case "add-vertex":
-      return "Add Vertex";
-    case "delete":
-      return "Delete";
-    default:
-      return "Select";
-  }
-}
-
-function graphStats() {
-  const { vertices, edges } = state.graph;
-  const maxEdges =
-    vertices.length <= 1
-      ? 0
-      : state.graph.settings.directed
-        ? vertices.length * (vertices.length - 1)
-        : (vertices.length * (vertices.length - 1)) / 2;
-  const density = maxEdges === 0 ? 0 : edges.length / maxEdges;
-  return {
-    vertices: vertices.length,
-    edges: edges.length,
-    density
-  };
-}
-
 function vertexById(vertexId: string) {
   return state.graph.vertices.find((vertex) => vertex.id === vertexId) ?? null;
 }
@@ -357,9 +412,7 @@ function labelForVertex(vertexId: string | null) {
 }
 
 function edgeKey(source: string, target: string) {
-  return state.graph.settings.directed
-    ? `${source}->${target}`
-    : [source, target].sort().join("--");
+  return graphEdgeKey(state.graph.settings.directed, source, target);
 }
 
 function addVertex(position: { x: number; y: number }) {
@@ -448,9 +501,16 @@ function runAndPlaySelectedAlgorithm() {
     startId: state.sourceId ?? undefined,
     targetId: state.targetId ?? undefined
   });
+  stopPlayback();
+  if (result.issue) {
+    clearTrace();
+    state.issueModal = result.issue;
+    renderApp();
+    return;
+  }
   state.trace = result;
   state.stepIndex = 0;
-  stopPlayback();
+  state.issueModal = null;
   state.isPlaying = result.steps.length > 1;
   renderApp();
 }
@@ -592,9 +652,7 @@ function createRandomGraph() {
   const usedKeys = new Set<string>();
   const edges: Edge[] = [];
   const addRandomEdge = (source: string, target: string) => {
-    const key = state.graph.settings.directed
-      ? `${source}->${target}`
-      : [source, target].sort().join("--");
+    const key = graphEdgeKey(state.graph.settings.directed, source, target);
     if (usedKeys.has(key)) {
       return false;
     }
@@ -639,46 +697,6 @@ function createRandomGraph() {
   );
 }
 
-function adjacencyList() {
-  const list = new Map<string, string[]>();
-  for (const vertex of state.graph.vertices) {
-    list.set(vertex.id, []);
-  }
-
-  for (const edge of state.graph.edges) {
-    const weightText = state.graph.settings.weighted ? ` (${edge.weight})` : "";
-    list.get(edge.source)?.push(`${labelForVertex(edge.target)}${weightText}`);
-    if (!state.graph.settings.directed) {
-      list.get(edge.target)?.push(`${labelForVertex(edge.source)}${weightText}`);
-    }
-  }
-
-  return state.graph.vertices.map((vertex) => ({
-    vertex: vertex.label,
-    neighbors: list.get(vertex.id) ?? []
-  }));
-}
-
-function adjacencyMatrix() {
-  const ids = state.graph.vertices.map((vertex) => vertex.id);
-  const matrix = ids.map(() => ids.map(() => "0"));
-
-  for (const edge of state.graph.edges) {
-    const sourceIndex = ids.indexOf(edge.source);
-    const targetIndex = ids.indexOf(edge.target);
-    const value = state.graph.settings.weighted ? `${edge.weight}` : "1";
-    matrix[sourceIndex][targetIndex] = value;
-    if (!state.graph.settings.directed) {
-      matrix[targetIndex][sourceIndex] = value;
-    }
-  }
-
-  return {
-    headers: state.graph.vertices.map((vertex) => vertex.label),
-    rows: matrix
-  };
-}
-
 function edgeGeometry(edge: Edge) {
   const source = vertexById(edge.source) as Vertex;
   const target = vertexById(edge.target) as Vertex;
@@ -721,7 +739,7 @@ function edgePopoverPosition(edge: Edge) {
 function renderEdgePopover() {
   const existing = graphStageEl.querySelector<HTMLElement>("[data-edge-popover]");
   const selectedEdge =
-    state.tool === "select" && state.graph.settings.weighted && state.selectedEdgeId
+    !state.issueModal && state.tool === "select" && state.graph.settings.weighted && state.selectedEdgeId
       ? edgeById(state.selectedEdgeId)
       : null;
 
@@ -755,123 +773,40 @@ function renderEdgePopover() {
   `;
 }
 
-function renderMetricBadges(metrics: Array<{ label: string; value: string }>) {
-  return metrics
-    .map(
-      (metric) => `
-        <div class="metric-chip">
-          <span>${escapeHtml(metric.label)}</span>
-          <strong>${escapeHtml(metric.value)}</strong>
-        </div>
-      `
-    )
-    .join("");
-}
-
-function renderNotes(notes: Note[]) {
-  if (notes.length === 0) {
-    return "";
+function renderIssueModal() {
+  const existing = graphStageEl.querySelector<HTMLElement>("[data-issue-modal]");
+  if (!state.issueModal) {
+    existing?.remove();
+    return;
   }
 
-  return `
-    <div class="note-stack">
-      ${notes
-        .map(
-          (entry) => `
-            <div class="note note--${entry.tone}">
-              ${escapeHtml(entry.text)}
-            </div>
+  const modal = existing ?? document.createElement("div");
+  if (!existing) {
+    modal.dataset.issueModal = "true";
+    modal.className = "issue-modal-backdrop";
+    graphStageEl.append(modal);
+  }
+
+  modal.innerHTML = `
+    <div class="issue-modal" role="dialog" aria-modal="true" aria-labelledby="issue-modal-title">
+      <div class="issue-modal__eyebrow">Cannot Run</div>
+      <h2 class="issue-modal__title" id="issue-modal-title">${escapeHtml(state.issueModal.title)}</h2>
+      <p class="issue-modal__message">${escapeHtml(state.issueModal.message)}</p>
+      ${
+        state.issueModal.details.length > 0
+          ? `
+            <ul class="issue-modal__details">
+              ${state.issueModal.details.map((detail) => `<li>${escapeHtml(detail)}</li>`).join("")}
+            </ul>
           `
-        )
-        .join("")}
+          : ""
+      }
+      <div class="issue-modal__actions">
+        <button class="primary-button issue-modal__button" data-action="dismiss-issue-modal">Close</button>
+      </div>
     </div>
   `;
 }
-
-function renderTable(table: Table) {
-  return `
-    <section class="data-block">
-      <div class="section-heading">
-        <h3>${escapeHtml(table.title)}</h3>
-      </div>
-      ${
-        table.rows.length > 0
-          ? `
-            <div class="table-scroll">
-              <table class="data-table">
-                <thead>
-                  <tr>${table.columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}</tr>
-                </thead>
-                <tbody>
-                  ${table.rows
-                    .map(
-                      (row) => `
-                        <tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>
-                      `
-                    )
-                    .join("")}
-                </tbody>
-              </table>
-            </div>
-          `
-          : `<div class="empty-state">${escapeHtml(table.emptyMessage ?? "No rows to display.")}</div>`
-      }
-    </section>
-  `;
-}
-
-function renderGraphDataContent() {
-  const list = adjacencyList();
-  const matrix = adjacencyMatrix();
-  const step = currentStep();
-
-  return `
-    <section class="data-block">
-      <div class="section-heading">
-        <h3>Live structures</h3>
-      </div>
-      <div class="sequence-grid">
-        <div class="sequence-card">
-          <span>Queue</span>
-          <strong>${step?.queue?.join(" -> ") || "-"}</strong>
-        </div>
-        <div class="sequence-card">
-          <span>Stack</span>
-          <strong>${step?.stack?.join(" -> ") || "-"}</strong>
-        </div>
-        <div class="sequence-card sequence-card--full">
-          <span>Order</span>
-          <strong>${step?.order?.join(" -> ") || "-"}</strong>
-        </div>
-      </div>
-    </section>
-
-    <section class="data-block">
-      <div class="section-heading">
-        <h3>Adjacency list</h3>
-      </div>
-      <div class="micro-list">
-        ${list
-          .map(
-            (entry) => `
-              <div><strong>${escapeHtml(entry.vertex)}</strong>: ${escapeHtml(
-                entry.neighbors.join(", ") || "none"
-              )}</div>
-            `
-          )
-          .join("")}
-      </div>
-    </section>
-
-    ${renderTable({
-      title: "Adjacency matrix",
-      columns: ["", ...matrix.headers],
-      rows: matrix.rows.map((row, index) => [matrix.headers[index], ...row])
-    })}
-  `;
-}
-
-function renderHero() {}
 
 function renderEditorPanel() {
   const selectedVertex = state.selectedVertexId ? vertexById(state.selectedVertexId) : null;
@@ -947,7 +882,7 @@ function renderEditorPanel() {
         <p class="eyebrow">Controls</p>
         <h2>Graph Visualizer</h2>
       </div>
-      <span class="status-dot ${state.edgeDraftStartId ? "status-dot--active" : ""}"></span>
+      ${renderBrandMark(Boolean(state.edgeDraftStartId))}
     </div>
 
     <section class="control-section">
@@ -994,11 +929,10 @@ function renderEditorPanel() {
 
     <section class="control-section">
       <div class="section-heading">
-        <h3>Algorithm</h3>
+        <h3>Run</h3>
       </div>
-      <label class="field">
-        <span>Algorithm</span>
-        <select id="algorithm-select">
+      <div class="field">
+        <select aria-label="Algorithm" id="algorithm-select">
           ${algorithmDefinitions
             .map(
               (algorithm) => `
@@ -1009,7 +943,7 @@ function renderEditorPanel() {
             )
             .join("")}
         </select>
-      </label>
+      </div>
       ${algorithmOptionFields ? `<div class="${optionFieldClass}">${algorithmOptionFields}</div>` : ""}
       <button class="primary-button primary-button--play" data-action="run-or-toggle-playback">${escapeHtml(primaryLabel)}</button>
       <div class="transport-row transport-row--sidebar">
@@ -1036,17 +970,12 @@ function renderEditorPanel() {
               <p>${escapeHtml(step.description)}</p>
             </div>
           `
-          : `
-            <div class="empty-state">
-              Press ${escapeHtml(`Run ${definition.name}`)} to start the visualization.
-            </div>
-          `
+          : ""
       }
       <div class="mini-metrics">
         <span>Time: <strong>${escapeHtml(definition.time)}</strong></span>
         <span>Space: <strong>${escapeHtml(definition.space)}</strong></span>
       </div>
-      <p class="microcopy">${escapeHtml(definition.description)}</p>
     </section>
 
     <section class="control-section">
@@ -1139,8 +1068,6 @@ function renderEditorPanel() {
     </details>
   `;
 }
-
-function renderStageToolbar() {}
 
 function renderGraph() {
   const step = currentStep();
@@ -1246,19 +1173,8 @@ function renderGraph() {
       .join("")}
   `;
   renderEdgePopover();
+  renderIssueModal();
 }
-
-function renderOverlay() {}
-
-function renderAlgorithmPanel() {}
-
-function renderTimelinePanel() {}
-
-function renderSummaryPanel() {}
-
-function renderTablesPanel() {}
-
-function renderDataPanel() {}
 
 function renderApp() {
   ensureValidSelections();
@@ -1298,12 +1214,6 @@ document.addEventListener("click", (event) => {
       case "toggle-weighted":
         setGraphMode("weighted");
         return;
-      case "load-sample":
-        {
-          const sampleId = actionTarget.dataset.sampleId ?? "showcase";
-          loadGraph(getSampleGraph(sampleId), sampleId);
-        }
-        return;
       case "generate-random-graph":
         createRandomGraph();
         return;
@@ -1318,6 +1228,9 @@ document.addEventListener("click", (event) => {
         return;
       case "stop-trace":
         stopTrace();
+        return;
+      case "dismiss-issue-modal":
+        dismissIssueModal();
         return;
       case "prev-step":
         goToStep(state.stepIndex - 1);
@@ -1362,6 +1275,14 @@ document.addEventListener("click", (event) => {
       default:
         break;
     }
+  }
+
+  const issueModalTarget = target.closest<HTMLElement>("[data-issue-modal]");
+  if (issueModalTarget) {
+    if (target === issueModalTarget) {
+      dismissIssueModal();
+    }
+    return;
   }
 
   if (target.closest("[data-edge-popover]")) {
@@ -1605,6 +1526,10 @@ window.addEventListener("keydown", (event) => {
   }
 
   if (event.key === "Escape") {
+    if (state.issueModal) {
+      dismissIssueModal();
+      return;
+    }
     state.edgeDraftStartId = null;
     state.edgeDraftPointer = null;
     state.selectedVertexId = null;

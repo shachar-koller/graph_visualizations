@@ -21,13 +21,6 @@ interface AdjacencyEntry {
   weight: number;
 }
 
-interface RelaxationEdge {
-  from: string;
-  to: string;
-  edge: Edge;
-  weight: number;
-}
-
 class TraceBuilder {
   vertices: Record<string, VertexVisual>;
   edges: Record<string, { tone?: EdgeTone }>;
@@ -273,7 +266,7 @@ function buildAdjacency(
 
 function buildRelaxationEdges(graph: Graph, options: { undirectedOverride?: boolean } = {}) {
   const directed = options.undirectedOverride ? false : graph.settings.directed;
-  const edges: RelaxationEdge[] = [];
+  const edges: AdjacencyEntry[] = [];
   for (const edge of graph.edges) {
     const weight = weightFor(graph, edge);
     edges.push({ from: edge.source, to: edge.target, edge, weight });
@@ -384,7 +377,12 @@ function invalidRun(
     description: definition.description,
     steps: [step],
     summary: defaultSummary(definition, "Configuration issue", details, [note("warning", message)], []),
-    tables: []
+    tables: [],
+    issue: {
+      title,
+      message,
+      details
+    }
   };
 }
 
@@ -489,6 +487,7 @@ const bfsDefinition: AlgorithmDefinition = {
   time: "O(V + E)",
   space: "O(V)",
   requiresStart: true,
+  requiresTarget: true,
   run(graph, options) {
     const startId = pickStartId(graph, options);
     if (!startId) {
@@ -1208,7 +1207,7 @@ const primDefinition: AlgorithmDefinition = {
     const builder = new TraceBuilder(graph);
     const visited = new Set<string>();
     const chosenEdges: string[] = [];
-    const priorityQueue = new MinPriorityQueue<{ from: string; to: string; edge: Edge; weight: number }>();
+    const priorityQueue = new MinPriorityQueue<AdjacencyEntry>();
     const adjacency = buildAdjacency(graph);
     const startId = pickStartId(graph, options) ?? graph.vertices[0]?.id;
 
