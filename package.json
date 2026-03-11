@@ -6,9 +6,14 @@
   "scripts": {
     "build": "bun run scripts/build.ts",
     "dev": "NODE_ENV=development bun run src/server.ts",
-    "start": "NODE_ENV=production bun run src/server.ts"
+    "start": "NODE_ENV=production bun run src/server.ts",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
   },
   "engines": {
     "bun": ">=1.3.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.72.0"
   }
 }
