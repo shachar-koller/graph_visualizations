@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Graph Visualizer</title>
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+IDxkZWZzPiA8bGluZWFyR3JhZGllbnQgaWQ9ImJnIiB4MT0iOCIgeDI9IjU2IiB5MT0iNiIgeTI9IjU4IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+IDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2Y4ZmJmZiIgLz4gPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZGJlYWZlIiAvPiA8L2xpbmVhckdyYWRpZW50PiA8L2RlZnM+IDxyZWN0IHdpZHRoPSI1NiIgaGVpZ2h0PSI1NiIgeD0iNCIgeT0iNCIgcng9IjE4IiBmaWxsPSJ1cmwoI2JnKSIgc3Ryb2tlPSIjOTNjNWZkIiBzdHJva2Utd2lkdGg9IjIiIC8+IDxwYXRoIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC42IiBkPSJNMTMgMTVjOC43LTQuMyAxOC43LTQuOSAzMC0xLjggMi40LjYgNC43IDEuNCA4IDEuNnY4LjRjLTUuOC0uNC0xMC4yLTIuMy0xNy4xLTMuMS03LjUtLjgtMTQuNC43LTIwLjkgNC43WiIgLz4gPHBhdGggZD0iTTI0IDMyaDE2IiBmaWxsPSJub25lIiBzdHJva2U9IiMxZDRlZDgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLXdpZHRoPSI1IiAvPiA8Y2lyY2xlIGN4PSIyMCIgY3k9IjMyIiByPSIxMSIgZmlsbD0iIzBmNzY2ZSIgc3Ryb2tlPSIjMGYxNzJhIiBzdHJva2Utb3BhY2l0eT0iMC4wOCIgc3Ryb2tlLXdpZHRoPSIxLjUiIC8+IDxjaXJjbGUgY3g9IjQ0IiBjeT0iMzIiIHI9IjExIiBmaWxsPSIjZDk3NzA2IiBzdHJva2U9IiMwZjE3MmEiIHN0cm9rZS1vcGFjaXR5PSIwLjA4IiBzdHJva2Utd2lkdGg9IjEuNSIgLz4gPHRleHQgeD0iMjAiIHk9IjMyIiBmaWxsPSIjZmZmZmZmIiBmb250LWZhbWlseT0iQXZlbmlyIE5leHQsIFRyZWJ1Y2hldCBNUywgU2Vnb2UgVUksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSI3MDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIj4gQSA8L3RleHQ+IDx0ZXh0IHg9IjQ0IiB5PSIzMiIgZmlsbD0iI2ZmZmZmZiIgZm9udC1mYW1pbHk9IkF2ZW5pciBOZXh0LCBUcmVidWNoZXQgTVMsIFNlZ29lIFVJLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmb250LXdlaWdodD0iNzAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0iY2VudHJhbCI+IEIgPC90ZXh0PiA8L3N2Zz4=" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <main class="workspace">
+        <aside class="panel sidebar" id="editor-panel"></aside>
+        <section class="stage-shell">
+          <div class="panel stage-panel">
+            <div class="graph-stage" id="graph-stage">
+              <svg
+                aria-label="Interactive graph canvas"
+                id="graph-svg"
+                viewBox="0 0 1200 760"
+                role="img"
+              ></svg>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <input hidden accept="application/json" id="import-file" type="file" />
+    <script src="/assets/main.js" type="module"></script>
+  </body>
+</html>
